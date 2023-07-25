@@ -20,9 +20,16 @@ contract Lottery {
     // Variables
     //-------------------------------------------------
     uint256 private immutable i_entranceFee;
+    address payable[] private s_players;
+
+    // Events
+    //-------------------------------------------------
+    event EnteredLottery(address indexed player);
 
     // Functions
     //-------------------------------------------------
+
+    //constructor
     constructor(uint256 entranceFee) {
         i_entranceFee = entranceFee;
     }
@@ -32,6 +39,8 @@ contract Lottery {
         if (msg.value < i_entranceFee) {
             revert Lottery__NotEnoughEthSent();
         }
+        s_players.push(payable(msg.sender));
+        emit EnteredLottery(msg.sender);
     }
 
     function pickWinner() public {}
