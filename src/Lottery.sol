@@ -13,6 +13,11 @@ error Lottery__NotEnoughEthSent();
 error Lottery__NotEnoughTimePassed();
 error Lottery__TransferFailed();
 error Lottery__LotteryNotOpen();
+error Lottery__UpkeepNotNeeded(
+    uint256 currentBalance,
+    uint256 numPlayers,
+    uint256 lotteryState
+);
 
 /**
  * @title Lottery
@@ -77,19 +82,50 @@ contract Lottery is VRFConsumerBaseV2 {
 
     function enterLottery() external payable {
         // require(msg.value >= i_entranceFee, "NOT enough ETH sent");
-        if (msg.value < i_entranceFee) revert Lottery__NotEnoughEthSent();
+        if (msg.value < i_entranceFee) {
+            revert Lottery__NotEnoughEthSent();
+        }
         if (s_lotteryState != LotteryState.OPEN)
             revert Lottery__LotteryNotOpen();
         s_players.push(payable(msg.sender));
         emit EnteredLottery(msg.sender);
     }
 
-    function pickWinner() external {
+    /**
+     * @dev This is the function that the Chainlink Keeper nodes call
+     * they look for `upkeepNeeded` to return True.
+     * the following should be true for this to return true:
+     * 1. The time interval has passed between lottery runs.
+     * 2. The lottery is open.
+     * 3. The contract has ETH.
+     * 4. Implicity, your subscription is funded with LINK.
+     */
+    function checkUpkeep(
+        bytes memory /*checkData*/
+    ) public view returns (bool upkeepNeeded, bytes memory /*performData*/) {
+        bool timeHasPassed = (block.timestamp - s_lastTimeStamp) >= i_interval;
+        bool isOpen = LotteryState.OPEN == s_lotteryState;
+        bool hasBalance = address(this).balance > 0;
+        bool hasPlayers = s_players.length > 0;
+        upkeepNeeded = (timeHasPassed && isOpen && hasBalance && hasPlayers);
+        return (upkeepNeeded, "0x0");
+    }
+
+    function performUpkeep(bytes calldata /* performData */) external {
+        //check if enough time has passed
+        (bool upkeepNeeded, ) = checkUpkeep("");
+        if (!upkeepNeeded) {
+            revert Lottery__UpkeepNotNeeded(
+                address(this).balance,
+                s_players.length,
+                uint256(s_lotteryState)
+            );
+        }
         if ((block.timestamp - s_lastTimeStamp) < i_interval) {
             revert Lottery__NotEnoughTimePassed();
         }
         s_lotteryState = LotteryState.CALCULATING;
-        uint256 requestId = i_vrfCoordinator.requestRandomWords(
+        i_vrfCoordinator.requestRandomWords(
             i_gasLane,
             i_subcsriptionId,
             REQUEST_CONFIRMATIONS,
@@ -99,7 +135,7 @@ contract Lottery is VRFConsumerBaseV2 {
     }
 
     function fulfillRandomWords(
-        uint256 requestId,
+        uint256 /*requestId */,
         uint256[] memory randomWords
     ) internal override {
         uint256 indexOfWinner = randomWords[0] % s_players.length;
