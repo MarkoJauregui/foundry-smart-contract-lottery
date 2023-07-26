@@ -7,18 +7,6 @@ pragma solidity ^0.8.18;
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 
-// Custom Errors
-//-------------------------------------------------
-error Lottery__NotEnoughEthSent();
-error Lottery__NotEnoughTimePassed();
-error Lottery__TransferFailed();
-error Lottery__LotteryNotOpen();
-error Lottery__UpkeepNotNeeded(
-    uint256 currentBalance,
-    uint256 numPlayers,
-    uint256 lotteryState
-);
-
 /**
  * @title Lottery
  * @author Marko Jauregui
@@ -27,6 +15,18 @@ error Lottery__UpkeepNotNeeded(
  */
 
 contract Lottery is VRFConsumerBaseV2 {
+    // Custom Errors
+    //-------------------------------------------------
+    error Lottery__NotEnoughEthSent();
+    error Lottery__NotEnoughTimePassed();
+    error Lottery__TransferFailed();
+    error Lottery__LotteryNotOpen();
+    error Lottery__UpkeepNotNeeded(
+        uint256 currentBalance,
+        uint256 numPlayers,
+        uint256 lotteryState
+    );
+
     // Type Declarations
     //-------------------------------------------------
     enum LotteryState {
@@ -158,5 +158,13 @@ contract Lottery is VRFConsumerBaseV2 {
     //-------------------------------------------------
     function getEntranceFee() public view returns (uint256) {
         return i_entranceFee;
+    }
+
+    function getLotteryState() external view returns (LotteryState) {
+        return s_lotteryState;
+    }
+
+    function getPlayer(uint256 playerIndex) external view returns (address) {
+        return s_players[playerIndex];
     }
 }
