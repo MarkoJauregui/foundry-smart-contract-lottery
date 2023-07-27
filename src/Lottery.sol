@@ -57,6 +57,7 @@ contract Lottery is VRFConsumerBaseV2 {
     //-------------------------------------------------
     event EnteredLottery(address indexed player);
     event PickedWinner(address indexed winner);
+    event RequestedLotteryWinner(uint256 indexed requestId);
 
     // Functions
     //-------------------------------------------------
@@ -125,13 +126,15 @@ contract Lottery is VRFConsumerBaseV2 {
             revert Lottery__NotEnoughTimePassed();
         }
         s_lotteryState = LotteryState.CALCULATING;
-        i_vrfCoordinator.requestRandomWords(
+        uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane,
             i_subcsriptionId,
             REQUEST_CONFIRMATIONS,
             i_callbackGasLimit,
             NUM_WORDS
         );
+
+        emit RequestedLotteryWinner(requestId);
     }
 
     function fulfillRandomWords(
@@ -166,5 +169,17 @@ contract Lottery is VRFConsumerBaseV2 {
 
     function getPlayer(uint256 playerIndex) external view returns (address) {
         return s_players[playerIndex];
+    }
+
+    function getRecentWinner() external view returns (address) {
+        return s_recentWinner;
+    }
+
+    function getLengthOfPlayersArray() external view returns (uint256) {
+        return s_players.length;
+    }
+
+    function getLastTimeStamp() external view returns (uint256) {
+        return s_lastTimeStamp;
     }
 }
