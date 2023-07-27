@@ -36,6 +36,11 @@ contract LotteryTest is Test {
         _;
     }
 
+    modifier skipFork() {
+        if (block.chainid != 31337) return;
+        _;
+    }
+
     function setUp() external {
         DeployLottery deployer = new DeployLottery();
         (lottery, helperConfig) = deployer.run();
@@ -47,7 +52,8 @@ contract LotteryTest is Test {
             gasLane,
             subscriptionId,
             callbackGasLimit,
-            link
+            link,
+
         ) = helperConfig.activeNetworkConfig();
         vm.deal(PLAYER, STARTING_USER_BALANCE);
     }
@@ -183,7 +189,7 @@ contract LotteryTest is Test {
 
     function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep(
         uint256 requestRandomNumber
-    ) public lotteryEnteredAndTimePassed {
+    ) public lotteryEnteredAndTimePassed skipFork {
         vm.expectRevert("nonexistent request");
         VRFCoordinatorV2Mock(vrfCoordinator).fulfillRandomWords(
             requestRandomNumber,
@@ -194,6 +200,7 @@ contract LotteryTest is Test {
     function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney()
         public
         lotteryEnteredAndTimePassed
+        skipFork
     {
         uint256 additionalEntrants = 5;
         uint256 startingIndex = 1;
